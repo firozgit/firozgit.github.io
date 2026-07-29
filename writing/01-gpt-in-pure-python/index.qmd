@@ -1,0 +1,134 @@
+---
+title: "A GPT in pure Python: no PyTorch, no NumPy, no tensors"
+description: "Part 1 of a series. Why writing matmul by hand is the point, whether it's fast enough to be usable, and what we're building toward."
+date: 2026-08-05
+categories: [pure python gpt]
+draft: true
+---
+
+Jay Mody's [GPT in 60 Lines of NumPy](https://jaykmody.com/blog/gpt-from-scratch/)
+is the clearest short explanation of GPT-2 inference I know of. It ends with a
+section called *What Next?*, listing everything the 60 lines leave out: batching,
+KV caching, sampling beyond greedy, training, evaluation, architecture
+improvements.
+
+That list is this series.
+
+Two changes from the original. First, no NumPy. Mody gets `@`, broadcasting,
+`np.split`, and a numerically sane `softmax` for free — which is exactly where the
+confusion lives for most people reading these posts. We will write all of it by
+hand, out of lists. Second, the series does not stop at a working forward pass.
+The interesting engineering starts after that.
+
+## Why removing NumPy is the point, not a stunt
+
+When you write
+
+``` python
+x = x @ w + b
+```
+
+three things are hidden from you: how the multiply-accumulate is ordered, how `b`
+gets stretched to match `x`, and what happens to precision along the way. When
+you write the loop yourself, all three become decisions you have to make. That
+matters later — by the time we add a KV cache and ragged batches, every bug will
+be a shape bug or an indexing bug, and you cannot debug shapes you have never
+had to construct.
+
+So post 2 builds `matrix.py`: matmul, transpose, broadcast-add, softmax, mean and
+variance. About a hundred lines, no imports. Everything after that is written
+against it.
+
+## But is it fast enough to actually use?
+
+Worth answering before you invest a weekend in it. Here is the honest floor —
+a tight triple loop, with the right operand pre-transposed so the inner loop
+walks contiguous memory:
+
+```{python}
+#| label: bench
+import time, random
+
+def matmul(A, B_T, m, k, n):
+    """A is (m, k). B_T is (n, k) — B pre-transposed so the inner loop is contiguous."""
+    out = [[0.0] * n for _ in range(m)]
+    for i in range(m):
+        Ai, Oi = A[i], out[i]
+        for j in range(n):
+            Bj = B_T[j]
+            s = 0.0
+            for t in range(k):
+                s += Ai[t] * Bj[t]
+            Oi[j] = s
+    return out
+
+m, k, n = 16, 768, 768          # 16 tokens through one GPT-2-width projection
+A   = [[random.random() for _ in range(k)] for _ in range(m)]
+B_T = [[random.random() for _ in range(k)] for _ in range(n)]
+
+t0 = time.perf_counter()
+matmul(A, B_T, m, k, n)
+elapsed = time.perf_counter() - t0
+
+macs = m * k * n
+print(f"{macs/1e6:.1f}M multiply-accumulates in {elapsed:.2f}s")
+print(f"{macs/elapsed/1e6:.1f}M MAC/s")
+```
+
+Call it ~25M MAC/s on one core. GPT-2 small is 124M parameters, so a single token
+costs roughly 124M multiply-accumulates:
+
+```{python}
+#| label: extrapolate
+rate = macs / elapsed
+for name, params in [("GPT-2 small (124M)", 124e6), ("tiny model (~1M)", 0.9e6)]:
+    print(f"{name:22s} {params/rate*1000:8.1f} ms/token")
+```
+
+So GPT-2 small runs at a few seconds per token in pure Python. Slow, but not
+impossible — a forty-token completion is a coffee break, not an overnight job.
+A ~1M-parameter model is effectively instant.
+
+That sets the plan: **the tiny model is the workhorse, GPT-2 is the proof.** We
+develop every mechanism on a 4-layer, 128-dimension model where the whole test
+suite runs in under a second, and once per series we load the real OpenAI weights
+and watch it produce English. Doing the engineering posts against GPT-2 would mean
+a five-second wait on every iteration, which is how a series dies at post three.
+
+## Where this goes
+
+| # | Post | The idea |
+|---|------|----------|
+| 1 | this one | the constraint, and whether it's viable |
+| 2 | `matrix.py` | matmul, broadcasting, and a softmax that doesn't overflow |
+| 3 | BPE from scratch | the part every from-scratch post imports and skips |
+| 4 | the forward pass | attention, MLP, layernorm, and real GPT-2 weights |
+| 5 | sampling | temperature, top-k, top-p, min-p, and reproducible seeds |
+| 6 | KV cache | one sequence, and the cache-vs-no-cache equality test |
+| 7 | batching | a batch dimension, by hand |
+| 8 | ragged batches | left-padding, masks that interact, position ids that skip pads |
+| 9 | continuous batching | why production servers don't wait for the slowest sequence |
+
+Then the architecture posts — RoPE, RMSNorm, SwiGLU, GQA and MLA against a
+KV-cache byte budget, online softmax, quantization, speculative decoding.
+
+## One rule for the series
+
+Every post ends by proving the new version agrees with the old one. Not
+"it looks right" — an actual assertion, with a tolerance:
+
+``` python
+def test_cache_matches_uncached(model, prompt, tol=1e-5):
+    slow = [logits_for(model, prompt[:i+1])[-1] for i in range(len(prompt))]
+    fast = logits_with_cache(model, prompt)
+    for step, (a, b) in enumerate(zip(slow, fast)):
+        worst = max(abs(x - y) for x, y in zip(a, b))
+        assert worst < tol, f"step {step}: max abs diff {worst:.2e}"
+```
+
+Optimizations that silently change your outputs are the single most common
+failure mode in inference code, and they are invisible unless you check. Writing
+the check is a five-minute habit that will save you a weekend, and it is most of
+what I do for a living.
+
+Next: [`matrix.py`](#) — a hundred lines of linear algebra with no imports.

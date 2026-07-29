@@ -1,0 +1,10 @@
+# Normalize to LF in the repository regardless of platform. CI renders on
+# Linux, so keeping LF everywhere avoids phantom whole-file diffs when you
+# commit from Windows.
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary

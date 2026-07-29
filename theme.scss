@@ -1,0 +1,64 @@
+/*-- scss:defaults --*/
+
+// ── Palette ────────────────────────────────────────────────────────────
+// Ground is a pale slate-mint, not cream. Ink is petrol, not black.
+// The accent pair is viridian / madder — pass and fail — because on a site
+// about evaluation, a green/red accent is semantic rather than decorative.
+
+$paper:        #edf2f1;
+$paper-raised: #f7faf9;
+$ink:          #14262b;
+$ink-soft:     #55696e;
+$rule:         #c9d8d6;
+$pass:         #17705f;
+$fail:         #a03242;
+
+// ── Type ───────────────────────────────────────────────────────────────
+// Inverted from the usual serif-display / sans-body pairing: everything
+// machine-adjacent (headings, code, labels) is IBM Plex Mono or Sans;
+// long-form prose gets Newsreader, because these posts are meant to be read.
+
+$font-family-monospace:   "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+$font-family-sans-serif:  "Newsreader", Iowan Old Style, Georgia, serif;
+$headings-font-family:    "IBM Plex Mono", ui-monospace, Menlo, monospace;
+$font-size-root:          18px;
+$line-height-base:        1.65;
+$headings-font-weight:    500;
+
+// ── Bootstrap / Quarto overrides ───────────────────────────────────────
+$body-bg:      $paper;
+$body-color:   $ink;
+$link-color:   $pass;
+$link-hover-color: darken($pass, 10%);
+$border-color: $rule;
+
+$code-bg:      $paper-raised;
+$code-color:   $ink;
+$code-block-bg: $paper-raised;
+
+$navbar-bg:    $paper;
+$navbar-fg:    $ink-soft;
+$navbar-hl:    $ink;
+$footer-bg:    $paper;
+$footer-fg:    $ink-soft;
+
+$toc-color:    $ink-soft;
+$toc-font-size: 0.72rem;
+
+$blockquote-border-color: $rule;
+$table-border-color: $rule;
+
+/*-- scss:rules --*/
+
+:root {
+  --paper: #{$paper};
+  --paper-raised: #{$paper-raised};
+  --ink: #{$ink};
+  --ink-soft: #{$ink-soft};
+  --rule: #{$rule};
+  --pass: #{$pass};
+  --fail: #{$fail};
+  --mono: #{$font-family-monospace};
+  --prose: #{$font-family-sans-serif};
+  --label: "IBM Plex Sans", system-ui, sans-serif;
+}

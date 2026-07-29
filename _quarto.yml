@@ -1,0 +1,58 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - CNAME
+
+website:
+  title: "Firoz Shaik"
+  site-url: "https://firozshaik.com"
+  description: "LLM evaluation, benchmarks, and computer-use agents. Plus a series on building a GPT in pure Python."
+  favicon: favicon.svg
+  open-graph: true
+  navbar:
+    left:
+      - text: "firoz shaik"
+        href: index.qmd
+    right:
+      - text: "writing"
+        href: writing.qmd
+      - text: "papers"
+        href: papers.qmd
+      - text: "about"
+        href: about.qmd
+      - icon: github
+        href: "https://github.com/firozgit"
+        aria-label: "GitHub"
+      - icon: linkedin
+        href: "https://linkedin.com/in/shaikfiroz"
+        aria-label: "LinkedIn"
+  page-footer:
+    left: "Firoz Shaik · Seattle, WA"
+    right: "Built with Quarto"
+
+format:
+  html:
+    theme:
+      light: theme.scss
+      dark: theme-dark.scss
+    css: styles.css
+    include-in-header: _includes/head.html
+    toc: true
+    toc-depth: 3
+    toc-title: "on this page"
+    anchor-sections: true
+    code-copy: true
+    code-overflow: scroll
+    link-external-newwindow: true
+    link-external-icon: false
+    fig-align: left
+    grid:
+      body-width: 760px
+      sidebar-width: 210px
+      margin-width: 210px
+
+execute:
+  freeze: auto
+  echo: true
+  warning: false

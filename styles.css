@@ -1,0 +1,290 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   firozshaik.com
+   Signature element: the assert-run block. Everything else stays quiet.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Global refinements ─────────────────────────────────────────────── */
+
+body {
+  font-family: var(--prose);
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, .navbar-brand, .navbar-nav .nav-link {
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+h1 { font-size: 1.55rem; line-height: 1.25; margin-bottom: 0.4rem; }
+h2 { font-size: 1.12rem; margin-top: 2.6rem; margin-bottom: 0.7rem; }
+h3 { font-size: 0.95rem; margin-top: 1.9rem; margin-bottom: 0.5rem; }
+
+p { margin-bottom: 1.05rem; }
+
+a { text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+/* Keyboard users must always be able to see where they are. */
+a:focus-visible,
+button:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--pass);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+/* ── Nav: lowercase mono wordmark, no chrome ────────────────────────── */
+
+.navbar {
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.78rem;
+}
+
+.navbar-brand {
+  font-size: 0.82rem !important;
+  letter-spacing: 0.02em;
+}
+
+.navbar-nav .nav-link {
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+}
+
+/* ── SIGNATURE: the assert run ──────────────────────────────────────── */
+/* Reads as pytest output. Justified here because the assertion is this
+   person's actual unit of work — OCB is 6,719 of them.                  */
+
+.assert-run {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 2.05;
+  border-left: 2px solid var(--rule);
+  padding: 0.9rem 0 0.9rem 1.15rem;
+  margin: 0.4rem 0 2.6rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.assert-run .ln {
+  display: block;
+  white-space: pre;
+}
+
+.assert-run .ok   { color: var(--pass); font-weight: 600; }
+.assert-run .kw   { color: var(--ink-soft); }
+.assert-run .op   { color: var(--ink-soft); }
+.assert-run .str  { color: var(--pass); }
+.assert-run .fld  { color: var(--ink); }
+
+.assert-run .summary {
+  display: block;
+  white-space: pre;
+  margin-top: 0.7rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.assert-run .summary b { color: var(--pass); font-weight: 600; }
+
+/* One orchestrated page-load moment: the lines settle in sequence, then
+   the summary lands last, the way a test run resolves. */
+@media (prefers-reduced-motion: no-preference) {
+  .assert-run .ln,
+  .assert-run .summary {
+    opacity: 0;
+    transform: translateY(4px);
+    animation: assert-settle 0.36s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+    animation-delay: calc(var(--i, 0) * 95ms);
+  }
+}
+
+@keyframes assert-settle {
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Section eyebrows: a label and a rule that runs to the margin ───── */
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-family: var(--label);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: lowercase;
+  color: var(--ink-soft);
+  margin: 3.2rem 0 1.3rem;
+}
+
+.eyebrow::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/* ── Standfirst: the one paragraph under the hero ───────────────────── */
+
+.standfirst {
+  font-size: 1.06rem;
+  line-height: 1.6;
+  max-width: 60ch;
+  color: var(--ink);
+}
+
+/* ── Writing listing ────────────────────────────────────────────────── */
+
+.quarto-listing { margin-top: 0; }
+
+.list.quarto-listing-default .listing-item {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.95rem 0;
+}
+
+.list.quarto-listing-default .listing-item:first-child { padding-top: 0; }
+
+.listing-title {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.25rem;
+}
+
+.listing-title a { text-decoration: none; }
+.listing-title a:hover { text-decoration: underline; }
+
+.listing-date,
+.listing-reading-time {
+  font-family: var(--label);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.listing-description {
+  font-family: var(--prose);
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  max-width: 62ch;
+}
+
+/* ── Papers ─────────────────────────────────────────────────────────── */
+
+.paper {
+  border-bottom: 1px solid var(--rule);
+  padding: 1.05rem 0;
+}
+
+.paper:last-of-type { border-bottom: none; }
+
+.paper-title {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 0.3rem;
+}
+
+.paper-venue {
+  font-family: var(--label);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.paper-venue .accepted { color: var(--pass); font-weight: 500; }
+
+.paper-links {
+  font-family: var(--label);
+  font-size: 0.72rem;
+}
+
+.paper-links a { margin-right: 0.9rem; }
+
+/* ── Code ───────────────────────────────────────────────────────────── */
+
+div.sourceCode,
+pre.sourceCode {
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+code:not(.sourceCode) {
+  font-size: 0.82em;
+  padding: 0.1em 0.32em;
+  border-radius: 2px;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+}
+
+/* Executed output sits flush under its code block, visually subordinate. */
+.cell-output pre {
+  font-size: 0.73rem;
+  border-left: 2px solid var(--rule);
+  border-top: none; border-right: none; border-bottom: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  padding-left: 0.9rem;
+  margin-top: 0.35rem;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────── */
+
+table { font-size: 0.86rem; }
+
+thead th {
+  font-family: var(--label);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule) !important;
+}
+
+td, th { padding: 0.45rem 0.7rem 0.45rem 0 !important; }
+
+/* Numeric columns line up in mono. Add class="num" to the cell. */
+td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ── TOC and footer ─────────────────────────────────────────────────── */
+
+#TOC, .sidebar nav[role="doc-toc"] {
+  font-family: var(--label);
+  letter-spacing: 0.02em;
+}
+
+#quarto-sidebar-toc-left .sidebar-title,
+nav[role="doc-toc"] > h2 {
+  font-family: var(--label);
+  font-size: 0.66rem;
+  letter-spacing: 0.15em;
+  text-transform: lowercase;
+}
+
+.nav-footer {
+  border-top: 1px solid var(--rule);
+  font-family: var(--label);
+  font-size: 0.72rem;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 620px) {
+  body { font-size: 17px; }
+  h1 { font-size: 1.32rem; }
+  .assert-run { font-size: 0.68rem; line-height: 1.95; padding-left: 0.85rem; }
+  .standfirst { font-size: 1rem; }
+  .eyebrow { margin-top: 2.4rem; }
+}

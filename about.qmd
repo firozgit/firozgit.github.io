@@ -1,0 +1,61 @@
+---
+title: "about"
+pagetitle: "About — Firoz Shaik"
+toc: false
+---
+
+I'm a machine learning scientist in Seattle. Eleven years in, currently Senior ML
+Scientist and ML tech lead at Microsoft.
+
+::: {.eyebrow}
+now
+:::
+
+At Microsoft I build LLM-powered features for Microsoft 365 Copilot and lead
+evaluation across the Office Product Group Copilots — Word, Excel, PowerPoint,
+OneNote. Three strands:
+
+**Benchmarks.** I took the Office Comprehension Benchmark from an idea to a
+public release: 304 native Office files, 1,022 questions, 6,719 atomic
+assertions across 12 industries, with the evaluation methodology, the judging
+setup, the failure-analysis tooling, and the cross-org wrangling that a release
+like that actually requires.
+
+**Computer-use agents.** An RL post-training recipe for vision-language GUI
+grounding, and a training environment that runs full trajectories against live
+PowerPoint Online with on-demand document cloning and automated grading.
+
+**Evaluation infrastructure.** The platform the Office Copilots run their tests
+on — test sets, pipelines, and quality dashboards handling thousands of tests a
+day so product decisions can be made quickly and defensibly.
+
+::: {.eyebrow}
+before
+:::
+
+**Penske Logistics**, data scientist, 2017–2021. Freight rate prediction with
+XGBoost that cut MAPE from 16% to 4%; a driver-safety model that reduced
+violations among watchlist drivers by 27%; monthly revenue forecasting across
+500+ locations. End to end each time — modeling through deployment and
+retraining.
+
+**Delphi Automotive (Aptiv)**, senior software engineer, 2012–2015. C and C++ on
+infotainment audio and speech for GM, Chrysler, Audi, and Great Wall. Led a
+five-person team and redesigned Chrysler's text-to-speech module.
+
+::: {.eyebrow}
+education
+:::
+
+M.S. Business Analytics and M.B.A., University of Tennessee, Knoxville.
+B.Tech. Electronics & Communications Engineering, Vellore Institute of Technology.
+
+::: {.eyebrow}
+contact
+:::
+
+[firoz@firozshaik.com](mailto:firoz@firozshaik.com) ·
+[linkedin](https://www.linkedin.com/in/shaikfiroz) ·
+[github](https://github.com/firozgit) ·
+[scholar](https://scholar.google.com/citations?user=ShlJsboAAAAJ) ·
+[orcid](https://orcid.org/0009-0005-0170-3829)

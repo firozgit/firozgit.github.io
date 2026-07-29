@@ -1,0 +1,53 @@
+/*-- scss:defaults --*/
+
+$paper:        #0e1a1e;
+$paper-raised: #14252a;
+$ink:          #dce7e5;
+$ink-soft:     #8ca3a6;
+$rule:         #24393f;
+$pass:         #4fbfa3;
+$fail:         #e0808d;
+
+$font-family-monospace:   "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+$font-family-sans-serif:  "Newsreader", Iowan Old Style, Georgia, serif;
+$headings-font-family:    "IBM Plex Mono", ui-monospace, Menlo, monospace;
+$font-size-root:          18px;
+$line-height-base:        1.65;
+$headings-font-weight:    500;
+
+$body-bg:      $paper;
+$body-color:   $ink;
+$link-color:   $pass;
+$link-hover-color: lighten($pass, 8%);
+$border-color: $rule;
+
+$code-bg:      $paper-raised;
+$code-color:   $ink;
+$code-block-bg: $paper-raised;
+
+$navbar-bg:    $paper;
+$navbar-fg:    $ink-soft;
+$navbar-hl:    $ink;
+$footer-bg:    $paper;
+$footer-fg:    $ink-soft;
+
+$toc-color:    $ink-soft;
+$toc-font-size: 0.72rem;
+
+$blockquote-border-color: $rule;
+$table-border-color: $rule;
+
+/*-- scss:rules --*/
+
+:root {
+  --paper: #{$paper};
+  --paper-raised: #{$paper-raised};
+  --ink: #{$ink};
+  --ink-soft: #{$ink-soft};
+  --rule: #{$rule};
+  --pass: #{$pass};
+  --fail: #{$fail};
+  --mono: #{$font-family-monospace};
+  --prose: #{$font-family-sans-serif};
+  --label: "IBM Plex Sans", system-ui, sans-serif;
+}
