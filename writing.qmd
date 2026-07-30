@@ -3,10 +3,12 @@ title: "writing"
 pagetitle: "Writing — Firoz Shaik"
 toc: false
 listing:
-  contents: writing
+  contents:
+    - writing
+    - medium-posts.yml
   type: default
   sort: "date desc"
-  fields: [date, title, description, reading-time]
+  fields: [date, title, description, categories]
   date-format: "MMM D, YYYY"
   categories: numbered
   feed: true
@@ -14,10 +16,21 @@ listing:
   filter-ui: false
 ---
 
-Two threads. **A GPT in pure Python** builds a working transformer out of lists
+Three threads. 
+
+**A GPT in pure Python** builds a working transformer out of lists
 and loops, then adds back the machinery real inference needs — batching, ragged
 batching, a KV cache, sampling — and proves at each step that the faster version
-still agrees with the slow one. **Evaluation** is the day job: benchmarks, judge
+still agrees with the slow one. 
+
+**Evaluation** is the day job: benchmarks, judge
 models, assertion design, and what failure analysis actually looks like at scale.
 
-There is an [RSS feed](writing.xml).
+
+**Fine-tuning on Azure** is a set of walkthroughs from 2025, comparing the
+low-code path through AI Foundry against full control in Azure ML — code for
+those lives in
+[github.com/firozgit/LLM-Finetuning](https://github.com/firozgit/LLM-Finetuning).
+
+Posts tagged `medium` are hosted on Medium and open in a new tab. Everything
+else lives here.

@@ -1,6 +1,6 @@
 ---
-pagetitle: "Firoz Shaik — LLM evaluation, benchmarks, computer-use agents"
-description: "Senior ML Scientist at Microsoft. I work on how you tell whether a model is actually any good."
+pagetitle: "Firoz Shaik — ML systems, agents, and evaluation"
+description: "Senior ML Scientist at Microsoft. I build language-model systems and the evaluation that proves they work."
 toc: false
 page-layout: article
 listing:
@@ -14,29 +14,35 @@ listing:
 ---
 
 ```{=html}
-<div class="assert-run" role="img" aria-label="Firoz Shaik is a Senior Machine Learning Scientist at Microsoft. He focuses on evaluation, benchmarks, and computer-use agents. He has shipped OCB, PPT-EVAL, and VerificAgent. He is currently writing a series on building a GPT in pure Python, without NumPy.">
-<span class="ln" style="--i:0"><span class="ok" aria-hidden="true">✓</span> <span class="kw">assert</span> <span class="fld">role   </span> <span class="op">==</span> <span class="str">"Senior ML Scientist, Microsoft"</span></span><span class="ln" style="--i:1"><span class="ok" aria-hidden="true">✓</span> <span class="kw">assert</span> <span class="fld">focus  </span> <span class="op">==</span> <span class="str">["evaluation", "benchmarks", "CUAs"]</span></span><span class="ln" style="--i:2"><span class="ok" aria-hidden="true">✓</span> <span class="kw">assert</span> <span class="fld">shipped</span> <span class="op">==</span> <span class="str">["OCB", "PPT-EVAL", "VerificAgent"]</span></span><span class="ln" style="--i:3"><span class="ok" aria-hidden="true">✓</span> <span class="kw">assert</span> <span class="fld">writing</span> <span class="op">==</span> <span class="str">"a GPT in pure Python. no numpy."</span></span><span class="summary" style="--i:4"><b>4 passed</b> in 0.00s</span>
+<div class="assert-run" role="img"
+     aria-label="Firoz Shaik is a Senior Machine Learning Scientist at Microsoft. He builds language-model features, agents, and evaluation systems, and takes models into products at Office scale. He is currently writing a series on building a GPT in pure Python, without a deep-learning framework.">
+<span class="ln" style="--i:0"><span class="ok" aria-hidden="true">&#10003;</span> <span class="kw">assert</span> <span class="fld">role   </span> <span class="op">==</span> <span class="str">"Senior ML Scientist, Microsoft"</span></span>
+<span class="ln" style="--i:1"><span class="ok" aria-hidden="true">&#10003;</span> <span class="kw">assert</span> <span class="fld">builds </span> <span class="op">==</span> <span class="str">["LLM features", "agents", "evals"]</span></span>
+<span class="ln" style="--i:2"><span class="ok" aria-hidden="true">&#10003;</span> <span class="kw">assert</span> <span class="fld">ships  </span> <span class="op">==</span> <span class="str">"models into products, at Office scale"</span></span>
+<span class="ln" style="--i:3"><span class="ok" aria-hidden="true">&#10003;</span> <span class="kw">assert</span> <span class="fld">writing</span> <span class="op">==</span> <span class="str">"a GPT in pure Python. no frameworks."</span></span>
+<span class="summary" style="--i:4"><b>4 passed</b> in 0.00s</span>
 </div>
 ```
 
 ::: {.standfirst}
-I build and evaluate language-model features at Microsoft — Copilot across Word,
-Excel, and PowerPoint — and I lead evaluation for the Office Copilots. Most of my
-work comes down to one unglamorous question: *how do you know whether the thing
-you shipped is actually good?* Benchmarks, assertions, judge models, and the
-failure taxonomies that come out the other side.
+I get language models into products at Microsoft — designing the systems around
+them, fine-tuning them for the job, and wiring them into Word, PowerPoint, Excel,
+OneNote, and Teams. The other half of the work is knowing whether any of it is actually
+good, which is why I also lead evaluation for the Office Copilots: benchmarks,
+judge models, and the failure taxonomies that come out the other side.
 :::
 
-Before Microsoft I spent four years as a data scientist at Penske Logistics
-shipping freight-pricing and driver-safety models, and three years before that
-writing C++ for automotive infotainment. Eleven years of putting models in front
-of people who will notice when they are wrong.
+Eleven plus years of shipping software/models — four as a data scientist at Penske Logistics
+owning freight-pricing and driver-safety systems end to end, and three before
+that writing C/C++ for automotive infotainment. Mostly I've worked on the
+unglamorous middle: the architecture, orchestration, and plumbing between a model
+that works in a notebook and one that works for millions of people.
 
 ::: {.eyebrow}
 writing
 :::
 
-I'm building a transformer from nothing — no PyTorch, no NumPy, just Python
+I'm building a transformer from nothing — no PyTorch or TensorFlow, just Python
 lists and loops — and then adding back everything real inference systems need:
 batching, ragged batching, a KV cache, sampling. Each post ends by proving the
 new version still matches the old one.
@@ -56,9 +62,10 @@ Office Comprehension Benchmark (OCB): A Benchmark for Document Comprehension
 across Office Documents
 :::
 ::: {.paper-venue}
-preprint · arXiv forthcoming · first author
+preprint · project lead and first author
 :::
 ::: {.paper-links}
+[arXiv:2607.01245](https://arxiv.org/abs/2607.01245)
 [dataset](https://huggingface.co/datasets/microsoft/OfficeComprehensionBenchmark)
 [code](https://github.com/microsoft/OfficeComprehensionBench)
 :::
@@ -72,6 +79,7 @@ PPT-EVAL: A Benchmark for Computer-Use Agents on PowerPoint Tasks
 [ICML 2026]{.accepted} · code released
 :::
 ::: {.paper-links}
+[arXiv:2606.31154](https://arxiv.org/abs/2606.31154)
 [code](https://github.com/microsoft/ppteval)
 :::
 :::
@@ -84,6 +92,4 @@ elsewhere
 
 [linkedin](https://www.linkedin.com/in/shaikfiroz) ·
 [github](https://github.com/firozgit) ·
-[scholar](https://scholar.google.com/citations?user=ShlJsboAAAAJ) ·
-[orcid](https://orcid.org/0009-0005-0170-3829) ·
 [firoz@firozshaik.com](mailto:firoz@firozshaik.com)

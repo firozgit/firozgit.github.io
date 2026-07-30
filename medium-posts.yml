@@ -1,0 +1,29 @@
+# Externally hosted posts, merged into the writing listing.
+# `path` may be an absolute URL — Quarto renders these exactly like local
+# posts but links off-site. Add syndicated or guest posts here.
+
+- title: "How to Fine-Tune a Large Language Model (LLM) Using Azure ML Studio"
+  path: https://medium.com/@firoz.shaik026/how-to-fine-tune-a-large-language-model-llm-using-azure-ml-studio-0528cdb1f94f
+  date: "2025-07-14"
+  categories: [azure, fine-tuning, medium]
+  description: >
+    The same problem with full control: phi-4-mini-instruct fine-tuned with LoRA
+    on Azure ML. Quota requests, GPU sizing, custom training environments,
+    real-time and batch endpoints, and evaluation against the baseline.
+
+- title: "Avoid Azure Billing Surprises: Set Up a Budget Alert Today"
+  path: https://medium.com/@firoz.shaik026/avoid-azure-billing-surprises-set-up-a-budget-alert-today-02f7bc703486
+  date: "2025-06-15"
+  categories: [azure, medium]
+  description: >
+    A hosted fine-tuned model bills you for existing, not for being used. What
+    that cost me, and the two-minute budget alert that stops it happening twice.
+
+- title: "How to Fine-Tune a Large Language Model (LLM) Using Azure AI Foundry"
+  path: https://medium.com/@firoz.shaik026/how-to-fine-tune-a-large-language-model-llm-using-azure-ai-foundry-1f6462e2fed5
+  date: "2025-06-06"
+  categories: [azure, fine-tuning, medium]
+  description: >
+    Fine-tuning gpt-4o-mini on the MedQA USMLE set through Foundry's low-code
+    path — dataset conversion to chat format, supervised LoRA fine-tuning,
+    deployment, and a baseline-versus-tuned accuracy comparison.

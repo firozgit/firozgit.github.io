@@ -4,51 +4,62 @@ pagetitle: "Papers — Firoz Shaik"
 toc: false
 ---
 
-::: {.paper-links}
-[Google Scholar](https://scholar.google.com/citations?user=ShlJsboAAAAJ) ·
-[ORCID 0009-0005-0170-3829](https://orcid.org/0009-0005-0170-3829)
-:::
-
 ::: {.paper}
+
 ::: {.paper-title}
 Office Comprehension Benchmark (OCB): A Benchmark for Document Comprehension across Office Documents
 :::
+
 ::: {.paper-venue}
-preprint · arXiv forthcoming · project lead and first author
+preprint · project lead and first author
 :::
-304 real Office files, 1,022 questions, 6,719 atomic assertions, 12 industries.
+
+304 native Office files, 1,022 questions, 6,719 atomic assertions, 12 industries.
 Evaluated with multi-model LLM judging and majority voting, calibrated against
 human baselines.
+
 ::: {.paper-links}
+[arXiv:2607.01245](https://arxiv.org/abs/2607.01245)
 [dataset](https://huggingface.co/datasets/microsoft/OfficeComprehensionBenchmark)
 [code](https://github.com/microsoft/OfficeComprehensionBench)
 :::
+
 :::
 
 ::: {.paper}
+
 ::: {.paper-title}
 PPT-EVAL: A Benchmark for Computer-Use Agents on PowerPoint Tasks
 :::
+
 ::: {.paper-venue}
 [International Conference on Machine Learning (ICML) 2026]{.accepted}
 :::
+
 A task benchmark for agents that drive PowerPoint through its interface rather
 than its API.
+
 ::: {.paper-links}
+[arXiv:2606.31154](https://arxiv.org/abs/2606.31154)
 [code](https://github.com/microsoft/ppteval)
 :::
+
 :::
 
 ::: {.paper}
+
 ::: {.paper-title}
 VerificAgent: Domain-Specific Memory Verification for Scalable Oversight of Aligned Computer-Use Agents
 :::
+
 ::: {.paper-venue}
 ICML 2025 Workshop on Computer Use Agents
 :::
+
 ::: {.paper-links}
 [arXiv:2506.02539](https://arxiv.org/abs/2506.02539)
 :::
+
 :::
 
 ::: {.eyebrow}

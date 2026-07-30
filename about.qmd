@@ -4,26 +4,56 @@ pagetitle: "About — Firoz Shaik"
 toc: false
 ---
 
-I'm a machine learning scientist in Seattle. Eleven years in, currently Senior ML
-Scientist and ML tech lead at Microsoft.
+I'm a machine learning scientist in Seattle — Senior ML Scientist and ML tech
+lead at Microsoft. Eleven plus years of taking models from prototype to production:
+the architecture around them, the integration into real products, and the
+evaluation that makes shipping them defensible.
 
 ::: {.eyebrow}
 now
 :::
 
-At Microsoft I build LLM-powered features for Microsoft 365 Copilot and lead
-evaluation across the Office Product Group Copilots — Word, Excel, PowerPoint,
-OneNote. Three strands:
+At Microsoft I take language models from prototype to production across
+Microsoft 365 Copilot, and lead evaluation for the Office Product Group Copilots
+— Word, PowerPoint, Excel, OneNote, Teams. Six strands:
+
+**Shipping Copilot features.** End-to-end LLM features across Word, Excel,
+PowerPoint, and other Office applications — from prompt and model choice through
+to what ships. On Microsoft Teams I fine-tuned and deployed GPT-4o mini models for
+tool calling, choosing the right tool and arguments from a user's request, which
+improved latency and accuracy together and cost less to serve than prompting a
+larger model for the same decision.
+
+**System architecture.** I contributed to the Office Domain Specific Language
+(ODSL) and the Semantic Interpreter that turns a plain-language request into
+executable Office commands, described in
+[Natural Language Commanding via Program Synthesis](https://arxiv.org/abs/2306.03460).
+I co-architected the zero-shot ODSL framework — which cut latency and made the
+system materially easier to maintain and extend — and co-created the LLM
+orchestration and command-execution layer behind Excel Copilot.
+
+**Computer-use agents.** Part of the team researching agents that drive Office
+through its interface rather than its API. The work spans an RL post-training
+recipe for vision-language GUI grounding that improved click accuracy from a
+small training set, and a training environment to run full trajectories
+against live PowerPoint Online — on-demand document cloning plus automated
+grading, so training can run in parallel at scale. Plus the benchmarks and
+verification frameworks that come with it,
+[PPT-EVAL](https://github.com/microsoft/ppteval) and
+[VerificAgent](https://arxiv.org/abs/2506.02539).
+
+**Production efficiency.** I retrained and deployed the ResNet-based
+chart-recommendation model behind **Recommended Charts** and **Analyze Data** in
+Excel. We then partnered with Intel to quantize it using Neural Compressor,
+which produced a large latency improvement and cut serving COGS at Excel's
+scale. I led benchmarking across the quantized variants and presented the
+results to the Office Product Group.
 
 **Benchmarks.** I took the Office Comprehension Benchmark from an idea to a
 public release: 304 native Office files, 1,022 questions, 6,719 atomic
 assertions across 12 industries, with the evaluation methodology, the judging
 setup, the failure-analysis tooling, and the cross-org wrangling that a release
 like that actually requires.
-
-**Computer-use agents.** An RL post-training recipe for vision-language GUI
-grounding, and a training environment that runs full trajectories against live
-PowerPoint Online with on-demand document cloning and automated grading.
 
 **Evaluation infrastructure.** The platform the Office Copilots run their tests
 on — test sets, pipelines, and quality dashboards handling thousands of tests a
@@ -40,14 +70,14 @@ violations among watchlist drivers by 27%; monthly revenue forecasting across
 retraining.
 
 **Delphi Automotive (Aptiv)**, senior software engineer, 2012–2015. C and C++ on
-infotainment audio and speech for GM, Chrysler, Audi, and Great Wall. Led a
-five-person team and redesigned Chrysler's text-to-speech module.
+infotainment audio and speech for GM, Chrysler, Audi, and Great Wall Motors.
 
 ::: {.eyebrow}
 education
 :::
 
 M.S. Business Analytics and M.B.A., University of Tennessee, Knoxville.
+
 B.Tech. Electronics & Communications Engineering, Vellore Institute of Technology.
 
 ::: {.eyebrow}
@@ -56,6 +86,4 @@ contact
 
 [firoz@firozshaik.com](mailto:firoz@firozshaik.com) ·
 [linkedin](https://www.linkedin.com/in/shaikfiroz) ·
-[github](https://github.com/firozgit) ·
-[scholar](https://scholar.google.com/citations?user=ShlJsboAAAAJ) ·
-[orcid](https://orcid.org/0009-0005-0170-3829)
+[github](https://github.com/firozgit)

@@ -11,9 +11,6 @@ website:
   favicon: favicon.svg
   open-graph: true
   navbar:
-    left:
-      - text: "firoz shaik"
-        href: index.qmd
     right:
       - text: "writing"
         href: writing.qmd
