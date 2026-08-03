@@ -1,5 +1,6 @@
 /_site/
 /.quarto/
+/rough/
 .DS_Store
 __pycache__/
 *.pyc
