@@ -42,10 +42,7 @@ that works in a notebook and one that works for millions of people.
 writing
 :::
 
-I'm building a transformer from nothing — no PyTorch or TensorFlow, just Python
-lists and loops — and then adding back everything real inference systems need:
-batching, ragged batching, a KV cache, sampling. Each post ends by proving the
-new version still matches the old one.
+I'm extending Jay Mody's picoGPT — GPT-2 in NumPy, no PyTorch or TensorFlow — with the parts a real inference system needs: batching, variable-length batching, a KV cache, sampling, and the scheduling and memory tricks that come after. Each post ends by proving the new version still matches the old one.
 
 ::: {#recent-writing}
 :::

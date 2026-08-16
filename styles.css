@@ -258,6 +258,35 @@ td, th { padding: 0.45rem 0.7rem 0.45rem 0 !important; }
 /* Numeric columns line up in mono. Add class="num" to the cell. */
 td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
+/* ── Article navigation ─────────────────────────────────────────────── */
+
+.article-navigation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  margin-top: 3.2rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.article-navigation-link {
+  text-decoration: none;
+}
+
+.article-navigation-link:hover { text-decoration: underline; }
+
+.article-navigation > p {
+  margin: 0;
+}
+
+.article-navigation > p:has(.next) {
+  grid-column: 2;
+  text-align: right;
+}
+
 /* ── TOC and footer ─────────────────────────────────────────────────── */
 
 #TOC, .sidebar nav[role="doc-toc"] {

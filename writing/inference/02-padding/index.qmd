@@ -1,0 +1,280 @@
+---
+title: "Batching prompts of different lengths"
+description: "Left-padding a batch, a mask that knows which positions are real, and position ids that don't count the padding."
+date: 2026-08-09
+categories: [gpt2 inference]
+---
+
+Make sure to read [post 1](../01-batching/) before reading this.
+
+Post 1 left one restriction in place: every prompt in the batch had to be the
+same length. Real prompts aren't. So this post pads them into a rectangle, and then make it work.
+
+Three things have to change together, and getting any one of them wrong gives you
+output that reads fine and is wrong:
+
+- the batch has to be padded, and padded on the **left**
+- the mask has to reject pad positions as well as future ones
+- position ids have to count real tokens only
+
+All the code below is in
+[`gpt2_v2_padding.py`](https://github.com/firozgit/picoGPT/blob/main/gpt2_v2_padding.py).
+
+## main
+
+We now build two matrices instead of one, and pass both down. `input_ids` and
+`attention_mask` are the same shape, and both are left-padded.
+
+```python
+def main(*prompts, n_tokens_to_generate: int = 10, model_size: str = "124M", models_dir: str = "models"):
+    # load encoder, hparams and parameters
+    encoder, hparams, params = load_encoder_hparams_and_params("124M", "models")
+
+    # pprint(hparams)
+    # pprint(params_shape(params))
+    token_lists = [encoder.encode(t) for t in prompts]
+    input_ids, attention_mask = pad_batch(token_lists)
+
+    # generate: [B, T] -> [B, n_tokens_to_generate]
+    output_ids = generate(input_ids, attention_mask, params, hparams["n_head"], n_tokens_to_generate)
+```
+
+`attention_mask` is the only new piece of information in this post. Everything
+else is derived from it.
+
+## pad_batch
+
+Take the longest prompt, make every row that wide, and fill from the right so
+the real tokens end up at the end.
+
+```python
+def pad_batch(token_lists, pad_id=0):
+    # get max length of a prompt in the batch and use that for setting token length T
+    T = max(len(t) for t in token_lists)       
+    B = len(token_lists)
+    input_ids = np.full((B, T), pad_id, dtype=np.int64)
+    attention_mask = np.zeros((B, T), dtype=np.int64)
+    for i, t in enumerate(token_lists):
+        input_ids[i, T - len(t):] = t           # left-pad: write at the end
+        attention_mask[i, T - len(t):] = 1      # 1 = real, 0 = pad
+    return input_ids, attention_mask
+```
+
+For prompts of length 5, 2 and 3:
+
+```
+input_ids       [[ 3  8  1  5  2]      attention_mask  [[1 1 1 1 1]
+                 [ 0  0  0  9  2]                       [0 0 0 1 1]
+                 [ 0  0  1  6  4]]                      [0 0 1 1 1]]
+```
+
+## generate
+
+Two changes.
+
+The mask goes along with the ids into `gpt2`. And once a token is generated, the
+mask has to grow by one column of ones — generated tokens are always real.
+
+```python
+def generate(input_ids, attention_mask, params, n_head, n_tokens_to_generate):
+    B = input_ids.shape[0]
+    for _ in tqdm.tqdm(range(n_tokens_to_generate)):
+        logits = gpt2(input_ids, attention_mask, **params, n_head=n_head)   # [B, T, n_vocab]
+        next_ids = np.argmax(logits[:, -1], axis=-1)                        # greedy: [B]
+        input_ids = np.concatenate([input_ids, next_ids[:, None]], axis=-1)
+        # generated tokens are always real -> extend the mask with ones
+        attention_mask = np.concatenate([attention_mask, np.ones((B, 1), dtype=attention_mask.dtype)], axis=-1)
+
+    return input_ids[:, -n_tokens_to_generate:]   # [B, n_tokens_to_generate]
+```
+
+### why left and not right
+
+`logits[:, -1]` is the whole reason. Generation reads the last position, and with
+left padding that is always the last real token.
+
+## gpt2 — position ids
+
+`wpe[np.arange(T)]` is now wrong. A left-padded row's first real token sits at
+array index `T - len(seq)`, but it is semantically at position 0. Give it position
+3 and the model believes there are three tokens of context it cannot see.
+
+```python
+# left-padding aware positions: first real token -> position 0
+pos_ids = np.clip(np.cumsum(attention_mask, axis=-1) - 1, 0, None).astype(np.int64)
+
+x = wte[input_ids] + wpe[pos_ids]             # [B, T, n_embd]
+```
+
+Walk it through for `[0, 0, 1, 1, 1]`:
+
+```
+attention_mask   [ 0   0   1   1   1]
+np.cumsum        [ 0   0   1   2   3]
+- 1              [-1  -1   0   1   2]
+np.clip(0)       [ 0   0   0   1   2]
+                   ^   ^   ^
+          pads land on 0   first real token gets 0
+```
+
+The pads end up at position 0, which is arbitrary and harmless — they're masked
+out anyway. What matters is the three real tokens getting 0, 1, 2.
+
+## build_mask
+
+The goal is to build mask matrix with `-1e10` at
+every position attention must not reach. In that way softmax get exactly zero probability on those positions.
+
+Two separate rules, added together:
+
+```python
+def build_mask(attention_mask):
+    # attention_mask: [B, T] with 1 = real token, 0 = pad.
+    # returns mask [B, 1, T, T] = causal (lower-tri) - key/pad mask.
+    B, T = attention_mask.shape
+    causal = (1 - np.tri(T, dtype=np.float32)) * -1e10          # [T, T]
+    key_pad = (1 - attention_mask)[:, None, None, :] * 1e10     # [B, 1, 1, T]
+    return causal[None, None] - key_pad                         # [B, 1, T, T]
+```
+
+**Causal** is about position — query `i` may not see key `j > i`. It depends only
+on `T`, so it's `[T, T]` and shared by the whole batch. Same as post 1.
+
+**key_pad** is about content — nobody may see a pad key, whatever their own
+position. It depends only on the row, so it's `[B, 1, 1, T]`. The two `1`s
+broadcast over heads and over query rows; the final `T` indexes key *columns*.
+
+That shape is the thing to get right. `[B, 1, T, 1]` would mask pad query rows
+instead of pad key columns, which sounds close enough and gives different answers.
+
+### worked through
+
+Take `[P, P, A, B, C]` — two pads then three real tokens.
+
+Causal alone, `0` where allowed:
+
+```
+        j=0    j=1    j=2    j=3    j=4
+  i=0     0   -1e10  -1e10  -1e10  -1e10
+  i=1     0     0    -1e10  -1e10  -1e10
+  i=2     0     0      0    -1e10  -1e10
+  i=3     0     0      0      0    -1e10
+  i=4     0     0      0      0      0
+```
+
+key_pad alone, broadcast down every row:
+
+```
+        j=0    j=1    j=2    j=3    j=4
+       1e10   1e10     0      0      0
+```
+
+`causal - key_pad` for the first real token, row `i=2`:
+
+```
+  causal    [   0      0      0    -1e10  -1e10 ]
+  key_pad   [ 1e10   1e10     0      0      0   ]
+  combined  [-1e10  -1e10     0    -1e10  -1e10 ]
+  softmax   [   0      0      1      0      0   ]
+```
+
+Which is right. 'A' is the first real token, so it can only see itself.
+
+### where it ends up
+
+The mask is built once in `gpt2` and passed down — `transformer_block`, then
+`mha`, then `attention`, where it's added to the scores just before the softmax.
+In post 1 `mha` built its own mask; now it receives one, because only `gpt2` knows
+about padding.
+
+Here are the actual attention weights that come out, for one head:
+
+```
+        P(0)   P(1)   A(2)   B(3)   C(4)
+  P(0)  0.133  0.000  0.141  0.712  0.014
+  P(1)  0.056  0.016  0.263  0.071  0.594
+  A(2)  0.000  0.000  1.000  0.000  0.000
+  B(3)  0.000  0.000  0.673  0.327  0.000
+  C(4)  0.000  0.000  0.278  0.557  0.165
+```
+
+Read down the two pad **columns** for the real rows A, B and C — all exactly
+`0.000`. Not small, exactly zero. That's the key_pad mask doing its job, and it's
+the only property this post needs to be true.
+
+### why there's no query pad mask
+
+The obvious next thought is to mask the pad rows too. You don't need to, and it's
+worth knowing why rather than blindly believing.
+
+Every operation after attention is row-wise. `linear` is `x @ W + b`, so row *i*
+of the output is row *i* of the input times `W` — one row in, one row out.
+`layer_norm` reduces over the last axis. `gelu` is elementwise. The residual add
+is elementwise. **None of them can move garbage from row 0 into row 2.**
+
+Attention is the only operation that mixes rows, and the key_pad mask already
+gives real rows exactly zero weight on pad columns. So garbage flows into the pad rows and stops there. 
+
+## Checking it
+
+The claim: **every row of a padded batch must produce what that prompt produces
+when run alone.** Padding is not allowed to change the answer.
+
+```python
+def test_padded_batch_matches_individual():
+    prompts = [[3, 8, 1, 5, 2], [9, 2], [1, 6, 4]]
+    input_ids, attention_mask = gpt2_v2_padding.pad_batch(prompts)
+    padded = gpt2_v2_padding.gpt2(input_ids, attention_mask,
+                                  **params, n_head=n_head)
+
+    for i, seq in enumerate(prompts):
+        expected = gpt2.gpt2(np.array(seq), **params, n_head=n_head)
+        actual = padded[i, -len(seq):]          # strip the left pads
+        np.testing.assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
+```
+
+It passes. `padded[i, -len(seq):]` is the whole trick — drop the pad rows and what
+remains lines up index for index with the standalone run.
+
+## What padding actually costs
+
+Prompts of length 5, 2 and 3 become a `[3, 5]` batch:
+
+```
+A A A A A
+. . . B B          . = pad
+. . C C C
+```
+
+Ten real tokens, fifteen positions. Five of them are padding, and in this
+implementation every one of them still runs through every layer. The more the
+lengths differ, the worse it gets — and since attention is quadratic in sequence
+length, the waste is bigger than the position count suggests: 3 × 5² = 75 score
+entries, against 25 + 4 + 9 = 38 if nothing were padded.
+
+Production servers mostly don't pad. They pack the real tokens flat and keep a
+list of where each sequence starts:
+
+```
+tokens       [A A A A A B B C C C]
+boundaries   [0, 5, 7, 10]
+```
+
+The attention kernel reads the boundaries and keeps each sequence inside its own
+slice. No pad positions to compute, and no pad mask to build — the whole of the
+last section stops being necessary.
+
+Padding is still where the masks and the position ids come from, which is why
+it's worth learning. 
+
+## Where this is going
+
+Next: a KV cache, so generation stops recomputing the whole prefix every step. 
+
+Then sampling.
+
+::: {.article-navigation role="navigation" aria-label="Article navigation"}
+[&larr; Previous: Adding a batch axis to picoGPT](../01-batching/){.article-navigation-link .previous}
+
+[Next: Adding a KV cache &rarr;](../03-kvcache/){.article-navigation-link .next}
+:::

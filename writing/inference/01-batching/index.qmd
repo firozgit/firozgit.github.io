@@ -22,7 +22,14 @@ The plan:
 - **post 2** — batching with variable length: padding, and modifying the masks accordingly
 - **post 3** — KV cache
 - **post 4** — sampling methodology
-- After that? Ask me when I get there
+- **post 5** — the cache as a data structure: preallocation, paging, prefix caching
+- **post 6** — the scheduler: continuous batching and chunked prefill
+- **post 7** — same answer, less work: online softmax, FlashAttention tiling, speculative decoding
+- **post 8** — trading accuracy for memory: quantization, GQA, sliding window
+- **post 9** — how do you know you didn't break it: perplexity and evaluation
+
+The first four are about making inference correct. The rest are about making it
+cheap, and then about how you tell whether cheap cost you anything.
 
 ## Recap of the code
 
@@ -284,6 +291,9 @@ them from idling — and why serving systems put many users in the same matmul.
 
 ## Where this is going
 
-Next: prompts of different lengths, which means padding, a mask that knows which
-positions are real, and position ids that skip the pads. Then a KV cache, then
-sampling — and after that, any other methods I can think of.
+Next: prompts of different lengths. That means padding, a mask that knows which
+positions are real, and position ids that skip the pads.
+
+::: {.article-navigation role="navigation" aria-label="Article navigation"}
+[Next: Batching prompts of different lengths &rarr;](../02-padding/){.article-navigation-link .next}
+:::

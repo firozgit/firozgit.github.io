@@ -18,14 +18,10 @@ listing:
 
 Three threads. 
 
-**A GPT in pure Python** builds a working transformer out of lists
-and loops, then adds back the machinery real inference needs — batching, ragged
-batching, a KV cache, sampling — and proves at each step that the faster version
-still agrees with the slow one. 
+**GPT-2 inference** extends Jay Mody's picoGPT with the machinery real serving needs — batching, padding, a KV cache, sampling, then scheduling and quantization — proving at each step that the faster version still agrees with the slower one. Code lives here - [github.com/firozgit/picoGPT](https://github.com/firozgit/picoGPT).
 
 **Evaluation** is the day job: benchmarks, judge
 models, assertion design, and what failure analysis actually looks like at scale.
-
 
 **Fine-tuning on Azure** is a set of walkthroughs from 2025, comparing the
 low-code path through AI Foundry against full control in Azure ML — code for

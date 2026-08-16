@@ -1,0 +1,256 @@
+---
+title: "Adding a KV cache"
+description: "Generation stops recomputing the whole prompt every step. Prefill and decode become different operations, and the causal mask disappears in decode."
+date: 2026-08-16
+categories: [gpt2 inference]
+---
+
+Make sure to read [post 2](../02-padding/) before reading this.
+
+Every step of the generation loop so far re-runs the entire prompt through every
+layer, and then throws away everything except the last row. In this post, we will stop doing that. 
+
+The idea is small. Keys and values for a token doesn't change and hence we compute them once, store them, and
+reuse them for every future step.
+
+Code for this post is in
+[`gpt2_v3_kvcache.py`](https://github.com/firozgit/picoGPT/blob/main/gpt2_v3_kvcache.py).
+
+## Why K and V but not Q
+
+A query asks "what does *this* token want from the past." Once that token has
+been processed, its query has done its job and is never needed again. Keys and
+values answer "what does this token *offer* to tokens that come later" — and
+every future token asks.
+
+So Q is used once. K and V are read at every subsequent step. Only those two are
+worth keeping.
+
+## Prefill and decode
+
+Adding the cache splits generation into two stages that look different enough to
+have their own names.
+
+**Prefill** runs the whole prompt in one pass. Many query positions, a full
+`[T, T]` score matrix, and the cache gets filled with K and V for every prompt
+token. This also gives you the first generated token.
+
+**Decode** runs one token at a time. Its Q attends over the entire cache, its own
+K and V are appended, and the cache grows by one. Repeat.
+
+```
+prompt = [A B C D E]
+
+prefill:   feed A B C D E   ->  cache holds 5 keys and values  ->  token F
+decode:    feed F           ->  cache holds 6                  ->  token G
+decode:    feed G           ->  cache holds 7                  ->  token H
+```
+
+## What this saves
+
+The prompt above is 10 tokens padded, generating lets say 20 tokens:
+
+```
+without cache:  390 token-positions through the whole model
+with cache:      29
+                13.4x less work
+```
+
+390 because step one processes 10 positions, step two processes 11, and so on up
+to 29. With the cache it's 10 for prefill plus 19 single tokens.
+
+Measured on my tiny test model, that came out at **2.2x faster** rather than
+13.4x. Obviously it all depends on the implementation of KV Cache methodology and the various dimensions of the model.
+
+For attention specifically, the per-step cost drops from `O(T²d)` to `O(Td)`.
+Here's where that comes from: `q @ k.T` is `[T, d] @ [d, T]`, so `T²` dot
+products each needing `d` multiplications. With the cache, `q` is a single row —
+`[1, d] @ [d, T]` — so `T` dot products of `d` multiplications each.
+
+The projections shrink by the same factor. Without the cache you re-project all
+`T` tokens every step whereas with cache, its one.
+
+## What it costs
+
+Memory, and it grows as the sequence does — up to the context limit. T is how many tokens are in the cache right now, which climbs by one with every token generated, until it hits `n_ctx`.
+
+```
+2 · n_layer · n_head · head_dim · seq_len · batch · sizeof(dtype)
+↑
+K and V
+```
+
+Worth putting real numbers through it. GPT-2 small at its full context, fp32,
+batch 1:
+
+```
+head_dim = 768 / 12 = 64
+
+K for one layer      [T, n_head, head_dim] = [1024, 12, 64]
+                     1024 × 12 × 64          =    786,432 values
+K and V              786,432 × 2             =  1,572,864 values
+across 12 layers     1,572,864 × 12          = 18,874,368 values
+at 4 bytes each      18,874,368 × 4          = 75,497,472 bytes
+
+                                             ≈ 75.5 MB
+```
+
+That's per sequence. Batch 8 makes it 604 MB — against 496 MB of model weights.
+The cache is bigger than the model.
+
+Both of the terms you don't control are the problem. It grows linearly with
+sequence length, so a long conversation costs more than a short one, and linearly
+with batch size, so serving more people costs more per person. Multiply them and
+that product is what makes serving expensive.
+
+Which is why the rest of the series keeps coming back to this formula. Every term
+in it is a lever, and most of the architecture work of the last few years is
+based on these levers:
+
+| Shrink | How | Where you've seen it |
+|---|---|---|
+| `n_head` | share K and V across query heads | MQA, GQA |
+| `head_dim` | compress K and V into a smaller vector | MLA (DeepSeek) |
+| `sizeof(dtype)` | fp8 or int8 cache | most production serving |
+| `seq_len` | sliding window, attention sinks | Mistral, StreamingLLM |
+| `batch` | the one you don't want to shrink | — |
+
+## generate
+
+This is where most of the change lives, because prefill and decode need different
+masks and different position ids — so both get computed here rather than inside
+`gpt2`.
+
+First, one cache slot per layer:
+
+```python
+n_layer = len(params["blocks"])
+caches = [{"k": None, "v": None} for _ in range(n_layer)]
+```
+
+### prefill
+
+Position ids and mask are exactly what post 2 built. Nothing new:
+
+```python
+pos_ids = np.clip(np.cumsum(attention_mask, axis=-1) - 1, 0, None).astype(np.int64)
+causal = (1 - np.tri(T, dtype=np.float32)) * -1e10          # [T, T]
+key_pad = (1 - attention_mask)[:, None, None, :] * 1e10     # [B, 1, 1, T]
+prefill_mask = causal[None, None] - key_pad                 # [B, 1, T, T]
+
+logits = gpt2(input_ids, pos_ids, prefill_mask, caches, **params, n_head=n_head)
+next_ids = np.argmax(logits[:, -1], axis=-1)
+```
+
+Then we hold on to two things for the decode loop:
+
+```python
+generated = [next_ids]
+cur_mask = attention_mask       # tracks pad over the cache
+last_pos = pos_ids[:, -1]       # true position of last prompt token
+```
+
+### decode
+
+```python
+for _ in tqdm.tqdm(range(n_tokens_to_generate - 1)):
+    cur_mask = np.concatenate([cur_mask, np.ones((B, 1), dtype=cur_mask.dtype)], axis=-1)
+    last_pos = last_pos + 1
+    new_pos = last_pos[:, None]                             # [B, 1]
+    dec_mask = (1 - cur_mask)[:, None, None, :] * -1e10     # [B, 1, 1, Tkv]
+
+    logits = gpt2(next_ids[:, None], new_pos, dec_mask, caches, **params, n_head=n_head)
+    next_ids = np.argmax(logits[:, -1], axis=-1)
+    generated.append(next_ids)
+```
+
+Three things worth talking about.
+
+**The causal mask is gone.** In decode you feed exactly one token, it sits at the
+end, and every cached key is already in its past. There is no future to mask.
+
+**The pad mask does not disappear** — cached pad positions are still garbage and still
+have to be excluded, which is why `cur_mask` grows a column of ones each step.
+
+**`-1e10`, not `1e10`.** In prefill the code builds `key_pad` as `+1e10` and then
+*subtracts* it. Here we build `-1e10` and add it directly. Same result, different
+sign convention, and an easy thing to trip over when reading the two side by side.
+
+**The position is the true position, not the cache length.** `pos_ids[:, -1]` is
+the last column of post 2's `cumsum(mask) - 1`, which is the real position of the
+last prompt token, per row. Then `+1` per step.
+
+## Carrying it through
+
+`pos_ids`, the mask and `caches` now travel down together — `gpt2` passes them to
+`transformer_block`, which passes them to `mha`. `gpt2` also indexes `wpe` with
+`pos_ids` rather than computing them itself:
+
+```python
+def gpt2(input_ids, pos_ids, mask, kv_caches, wte, wpe, blocks, ln_f, n_head):
+    x = wte[input_ids] + wpe[pos_ids]
+    for block, cache in zip(blocks, kv_caches):
+        x = transformer_block(x, **block, n_head=n_head, mask=mask, layer_cache=cache)
+    x = layer_norm(x, **ln_f)
+    return x @ wte.T
+```
+
+Each layer gets its own cache dict, which is what `zip(blocks, kv_caches)` is
+doing.
+
+## mha
+
+The only real change. After splitting heads, check whether the cache has anything
+in it. If it does, put the old K and V in front of the new ones. Either way,
+write the result back.
+
+```python
+q, k, v = split_heads(q), split_heads(k), split_heads(v)   # [B, H, T, d_head]
+
+if layer_cache is not None:
+    if layer_cache["k"] is not None:
+        k = np.concatenate([layer_cache["k"], k], axis=2)
+        v = np.concatenate([layer_cache["v"], v], axis=2)
+    layer_cache["k"], layer_cache["v"] = k, v
+
+out = attention(q, k, v, mask)
+```
+
+**`axis=2` is the time axis** in `[B, H, T, d_head]`. 
+
+Note that `q` keeps its original length. During decode it's a single row while
+`k` and `v` are the whole history, so `attention` produces a `[B, H, 1, Tkv]`
+score matrix. `attention` itself needs no changes at all.
+
+## Checking it
+
+The claim: **cached generation must produce identical tokens to uncached.**
+Faster, not different.
+
+```python
+def test_cache_matches_uncached():
+    prompts = [[7,3,19,1,25,8,11,4,2,15], [9,2], [1,6,4,22]]
+    input_ids, attention_mask = pad_batch(prompts)
+
+    expected = gpt2_v2_padding.generate(input_ids, attention_mask, params, n_head, 20)
+    actual   = gpt2_v3_kvcache.generate(input_ids, attention_mask, params, n_head, 20)
+
+    np.testing.assert_array_equal(actual, expected)
+```
+
+It passes — identical token ids, max diff 0.
+
+## Where this is going
+
+Growing the cache with `np.concatenate` reallocates and copies the whole thing
+every step, which is quadratic memory traffic to store linear data. Preallocating
+a buffer and writing into a slice fixes it, and that's the doorway to paged
+attention.
+
+Next though: sampling, so the model stops picking the argmax every time.
+
+::: {.article-navigation role="navigation" aria-label="Article navigation"}
+[&larr; Previous: Batching prompts of different lengths](../02-padding/){.article-navigation-link .previous}
+
+[Next: Sampling from GPT-2 &rarr;](../04-sampling/){.article-navigation-link .next}
+:::

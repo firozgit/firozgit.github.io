@@ -1,0 +1,288 @@
+---
+title: "Sampling: temperature, top-k and top-p"
+description: "Greedy decoding makes the model repeat itself. Adding temperature, top-k and top-p (nucleus sampling."
+date: 2026-08-17
+categories: [gpt2 inference]
+---
+
+Make sure to read [post 3](../03-kvcache/) before reading this.
+
+Everything so far has used greedy decoding: take the argmax, every step. This post replaces 
+the argmax with a proper sampler. Almost nothing else changes
+— `temperature`, `top_k`, `top_p` and an `rng` get passed down to a new
+`sample_next`, and that function does all the work.
+
+Code is in
+[`gpt2_v4_sampling.py`](https://github.com/firozgit/picoGPT/blob/main/gpt2_v4_sampling.py).
+
+## The plumbing
+
+`main` builds a seeded generator and passes the arguments through:
+
+```python
+def main(*prompts, n_tokens_to_generate: int = 10, model_size: str = "124M", models_dir: str = "models",
+          temperature=1.0, top_k=None, top_p=1.0, seed=None):
+    ...
+    rng = np.random.default_rng(seed)
+    # generate: [B, T] -> [B, n_tokens_to_generate]
+    output_ids = generate(
+        input_ids, attention_mask, params, hparams["n_head"], n_tokens_to_generate,
+        temperature=temperature, top_k=top_k, top_p=top_p, rng=rng,
+    )
+```
+
+And in `generate`, both places that used to call `np.argmax` now call
+`sample_next` instead:
+
+```python
+logits = gpt2(input_ids, pos_ids, prefill_mask, caches, **params, n_head=n_head)
+next_ids = sample_next(logits[:, -1], temperature, top_k, top_p, rng)
+```
+
+`np.random.default_rng(seed)` rather than `np.random.seed`. The second sets one generator shared by the whole program, so anything else that draws a random number changes what you get. 
+A generator object is yours — nobody else can pull from it.
+
+## sample_next
+
+The function takes `[B, V]` — the last-position logits for every row in the batch
+— and returns `[B]`, one token id per row.
+
+### filter the logits, not the probabilities
+
+Every filter marks rejected tokens with `-np.inf` in the **logits**, and there's one softmax at the
+very end.
+
+This works because softmax doesn't care about adding a constant:
+
+```
+softmax(x) == softmax(x - c)   for any c
+```
+
+So temperature, top-k and top-p all become edits to the logits. Rejected entries become `exp(-inf) = 0` exactly.
+
+### the greedy anchor
+
+```python
+if temperature == 0:
+    return np.argmax(logits, axis=-1)
+```
+
+`temperature=0` short-circuits straight to argmax, which is exactly what previous posts did. 
+
+### temperature
+
+```python
+logits = logits / temperature
+```
+Dividing the logits changes the **gaps** between them, and softmax turns a gap
+into a ratio. That's the whole mechanism.
+
+Take three logits, 1, 2 and 3:
+
+```
+    T     logits / T      gap        probabilities         top ÷ middle
+  0.5     [2.  4.  6. ]   2.0    [0.0159  0.1173  0.8668]      7.39x
+  1.0     [1.  2.  3. ]   1.0    [0.0900  0.2447  0.6652]      2.72x
+  2.0     [0.5 1.  1.5]   0.5    [0.1863  0.3072  0.5065]      1.65x
+```
+
+Divide by 0.5 and the numbers spread out — the gap between neighbours doubles from
+1 to 2. Bigger gaps mean the larger logits pull further ahead, so the top token
+goes from 67% of the mass to 87%.
+
+Divide by 2 and the opposite happens. The numbers bunch together, the gap halves
+to 0.5, and the top token drops to 51% — barely ahead of the middle one.
+
+The last column is why the effect is so strong. Softmax exponentiates, so the
+ratio between two tokens is `e^gap`. A gap of 1 makes the top token 2.7x as likely
+as the middle one; a gap of 2 makes it 7.4x. Doubling the gap doesn't double the
+preference, it squares it.
+
+That also explains both extremes. As `T` goes to 0 the gaps blow up, every ratio
+goes to infinity, and the top token takes everything — that's greedy, which is why
+`temperature=0` short-circuits to `argmax`. As `T` grows the gaps shrink toward
+zero, every ratio approaches 1, and you converge on picking uniformly at random.
+
+
+### top-k
+
+Keep the `k` highest logits, reject the rest.
+
+```python
+if top_k is not None and top_k < logits.shape[-1]:
+    kth = np.sort(logits, axis=-1)[:, -top_k][:, None]   # [B, 1]
+    logits = np.where(logits < kth, -np.inf, logits)
+```
+
+Sort each row, read off the k-th largest, reject anything strictly below it. With
+`k=2` on the same logits:
+
+```
+2nd largest logit:  2.0
+after filtering:    [-inf   3.   2.  -inf  -inf]
+```
+
+`[:, None]` puts the axis back so `kth` broadcasts against `[B, V]`.
+
+Note the strict `<` keeps ties. Ask for the top 5 and if three tokens share the
+5th-highest logit you keep 7 — which is right, since breaking ties by index would
+make the answer depend on vocabulary order.
+
+### top-p
+
+The hard one.
+
+Top-p keeps the smallest set of tokens whose probabilities add up to at least
+`p`. It's adaptive where top-k is fixed — a confident distribution keeps one
+token, a flat one keeps hundreds. 
+
+To find the smallest set of tokens that reaches the threshold, sort the probabilities in descending order and take a cumulative sum. Keep the ones at the front, just enough to cross p, and mark everything after that for removal. Then map those positions back to the original token ids and set them to `-np.inf`.
+
+```python
+order = np.argsort(logits, axis=-1)[:, ::-1]            # desc indices [B, V] 
+sorted_logits = np.take_along_axis(logits, order, axis=-1)
+cum_prob = np.cumsum(softmax(sorted_logits), axis=-1)   # cumulative prob mass
+remove = cum_prob > top_p                               # True for logits that needs to be removed
+remove[:, 1:] = remove[:, :-1]                          # shift right: keep first crosser
+remove[:, 0] = False                                    # always keep top 1 element
+remove_orig = np.empty_like(remove)                     # placeholder array
+np.put_along_axis(remove_orig, order, remove, axis=-1)  # put back the logits True/False in original logits indices
+logits = np.where(remove_orig, -np.inf, logits)
+```
+
+Walked through with `p=0.9`:
+
+```
+order (desc)        [1  2  0  3  4]           token ids, most likely first
+sorted probs        [0.6236  0.2294  0.0844  0.0512  0.0114]
+cumulative          [0.6236  0.8530  0.9374  0.9886  1.0000]
+
+cum > 0.9           [F  F  T  T  T]           <- one too many
+after shift right   [F  F  F  T  T]           <- correct
+
+kept tokens: [1, 2, 0]
+  mass kept:  0.9374   >= 0.9
+  one fewer:  0.8530   <  0.9, so this really is the smallest set
+```
+
+**The shift is the whole trick.** `cum > p` marks every token at or past the
+threshold — but the token that *crosses* p is inside the nucleus by definition.
+Without the shift you'd drop token 0 and keep only 0.853 of the mass, which is
+less than the 0.9 you asked for.
+
+`remove[:, 0] = False` handles the edge case. If one token holds more than `p`
+on its own — say 0.95 with `p=0.9` — an unshifted mask removes everything, and
+softmax over a row of all `-inf` is `nan`.
+
+The last two lines put the mask back in vocabulary order. The mask was built on
+sorted data; the logits were never sorted. `np.put_along_axis` writes each flag
+back to where it came from. 
+
+
+### the draw
+
+We have probabilities. Now we need to actually pick a token, for every row in the batch, without looping.
+
+Picture the numbers 0 to 1 as a line, and give each token a segment as long as its
+probability:
+
+```
+0                                                             1
+|----|--------------------------------------|-------------|--||
+t0   t1                                     t2            t3 t4
+```
+
+Throw a dart at a uniformly random point on that line. Whichever segment it lands
+in is the token you picked. Token 1 owns 62% of the line, so it gets picked 62% of
+the time. That's all sampling from a distribution means.
+
+`np.cumsum(probs)` gives you the segment boundaries, and `rng.random()` throws the
+dart. The only question left is which segment a given point falls in — and
+counting how many boundaries lie below it answers exactly that:
+
+```
+probs   [0.0844  0.6236  0.2294  0.0512  0.0114]
+cdf     [0.0844  0.7080  0.9374  0.9886  1.0000]
+
+r=0.05    cdf < r -> [F F F F F]   sum=0   token 0
+r=0.5     cdf < r -> [T F F F F]   sum=1   token 1
+r=0.95    cdf < r -> [T T T F F]   sum=3   token 3
+r=0.999   cdf < r -> [T T T T F]   sum=4   token 4
+```
+
+The count *is* the index.
+
+`np.searchsorted` does the same thing in `O(log V)` but won't vectorise over rows
+without a loop, so `(cdf < r).sum()` — `O(V)` and fully vectorised — is the better
+trade here.
+
+The `np.minimum` clamp is for edge case. if next_id turns out to be V, then index will be out of bound.
+
+### one note on -inf
+
+Post 2 was careful to use `-1e10` rather than `-np.inf` in the attention mask,
+because a fully-masked row would softmax to `nan`. Here `-np.inf` is fine, and
+it's worth knowing why.
+
+In the mask, whole rows could end up fully masked. Here at least one token always
+survives — `top_k >= 1`, and `remove[:, 0] = False` guarantees top-1 gets through
+top-p. So the row is never all `-inf`, and there's no `nan` to worry about.
+
+## Order matters
+
+Temperature, then top-k, then top-p. This is a choice, and libraries disagree.
+
+Top-p reads the gaps between probabilities to decide where to cut, and
+temperature changes those gaps — so `temperature=0.7, top_p=0.9` keeps a
+different set depending on which runs first. This order matches HuggingFace, so
+results are comparable. 
+
+## Checking it
+
+The claim: **`temperature=0` must reproduce post 3 exactly.** Sampling is a
+superset, not a replacement.
+
+```python
+def test_temperature_zero_matches_greedy():
+    prompts = [[7,3,19,1,25,8,11,4,2,15], [9,2], [1,6,4,22]]
+    input_ids, attention_mask = pad_batch(prompts)
+
+    expected = gpt2_v3_kvcache.generate(input_ids, attention_mask,
+                                        params, n_head, 20)
+    actual = gpt2_v4_sampling.generate(input_ids, attention_mask,
+                                       params, n_head, 20,
+                                       temperature=0.0,
+                                       rng=np.random.default_rng(0))
+    np.testing.assert_array_equal(actual, expected)
+```
+
+It passes.
+
+## Where this is going
+
+That's the inference path: batched, variable length, cached, and sampled, with
+each version checked against the one above it.
+
+Five more:
+
+* **post 5 — the cache as a data structure.** Preallocation instead of
+  `np.concatenate`, then fixed blocks and a block table, then two requests with the
+  same system prompt sharing them.
+* **post 6 — the scheduler.** Continuous batching: sequences join and leave the
+  batch mid-generation instead of everyone waiting for the slowest one.
+* **post 7 — same answer, less work.** Online softmax and FlashAttention's tiling,
+  then speculative decoding. Two unrelated techniques that both provably don't
+  change the output.
+* **post 8 — trading accuracy for memory.** int8 weights, a quantized cache, GQA,
+  sliding window. The first post where the output changes on purpose.
+* **post 9 — how do you know you didn't break it.** Perplexity from scratch, then
+  the harder question: what do you do when the thing you changed was never supposed
+  to be identical?
+
+Everything so far has been a forward pass with the weights held fixed. Posts 5
+through 7 keep that promise — same output, less work. Post 8 is where it breaks on
+purpose, and post 9 is what you do about it.
+
+::: {.article-navigation role="navigation" aria-label="Article navigation"}
+[&larr; Previous: Adding a KV cache](../03-kvcache/){.article-navigation-link .previous}
+:::
