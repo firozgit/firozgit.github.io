@@ -1,6 +1,7 @@
 ---
 title: "about"
-pagetitle: "About — Firoz Shaik"
+pagetitle: "About - Firoz Shaik"
+description: "Senior ML Scientist at Microsoft. Eleven plus years taking models from prototype to production — architecture, integration, and the evaluation that makes shipping them defensible."
 toc: false
 ---
 

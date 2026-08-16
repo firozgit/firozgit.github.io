@@ -1,6 +1,7 @@
 ---
 title: "papers"
-pagetitle: "Papers — Firoz Shaik"
+pagetitle: "Papers - Firoz Shaik"
+description: "Benchmarks and evaluation for document comprehension and computer-use agents: OCB, PPT-EVAL, and VerificAgent."
 toc: false
 ---
 

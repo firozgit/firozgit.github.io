@@ -1,6 +1,7 @@
 ---
 title: "writing"
-pagetitle: "Writing — Firoz Shaik"
+pagetitle: "Writing - Firoz Shaik"
+description: "A series on GPT-2 inference in NumPy — batching, padding, KV cache, sampling — plus notes on evaluation and fine-tuning on Azure."
 toc: false
 listing:
   contents:
