@@ -7,7 +7,7 @@ project:
 website:
   title: "Firoz Shaik"
   site-url: "https://firozshaik.com"
-  description: "LLM evaluation, benchmarks, and computer-use agents. Plus a series on building a GPT in pure Python."
+  description: "LLM systems, evaluation, and a series on GPT-2 inference in NumPy."
   favicon: favicon.svg
   open-graph: true
   navbar:
